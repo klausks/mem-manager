@@ -7,6 +7,5 @@ public class Page {
     public Page() {
         lastAccessedAt = LocalDateTime.now();
     }
-    Date
 
 }
