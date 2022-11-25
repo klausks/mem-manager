@@ -1,33 +1,65 @@
+import java.util.ArrayList;
 import java.util.List;
+import java.util.Optional;
 
 public class OS {
-    public static final int MAX_VIRTUAL_MEM = 1000000;
-    public static final int MAX_PHYSICAL_MEM = 64000;
+    private static List<Process> processes = new ArrayList<>();
 
-    public static int physicalMemBytesInUse = 0;
-    public static int framesInuse = 0;
-    public static int pagesInUse = 0
-    public static int virtualMemBytesInUse = 0;
+    public static void createProcess(int sizeInKb) {
+        Process process = new Process(sizeInKb);
+        if (!canAllocateVirtualMem(sizeInKb)) {
+            System.err.println("Could not load process: not enough virtual memory available!");
+            return;
+        }
+        int nOfRequiredPages = Math.round((float)sizeInKb / Page.SIZE_KB);
+        List<Page> pages = MMU.allocateVirtualMem(nOfRequiredPages);
 
-    public static final int PAGE_SIZE = 8000;
-    private static CPU cpu;
-    private static List<Process> processes;
+        process.setVirtualAddressSpace(pages);
+        MemoryMonitor.virtualMemKbInUse += Page.SIZE_KB;
 
-    public static void createProcess(int sizeInBytes) {
-        Process newProcess = new Process(sizeInBytes);
-        List<Page> pages = CPU.loadProcess(sizeInBytes);
-        newProcess.setVirtualAddressSpace(pages);
-        processes.add(newProcess);
+        processes.add(process);
+        System.out.printf("%s with size of %d kB created\n", process, sizeInKb);
     }
 
-    public static boolean accessMemory(Page page) {
-        CPU.loadPage(page);
+    private static boolean canAllocateVirtualMem(int sizeInKb) {
+        return (sizeInKb + MemoryMonitor.virtualMemKbInUse < MemoryMonitor.MAX_VIRTUAL_MEM_KB);
     }
 
-    public static void swapPage(Integer pageNum, Page newPage) {
-
+    public static void runProcesses() {
+        for (Process p : processes) {
+            p.run();
+        }
     }
 
+    public static void runProcess(Process p) {
+        p.run();
+    }
 
+    public static void accessMemory(Page page) {
+        page.updateLastAccessAt();
+        Optional<Frame> frameOptional = MMU.getFrame(page);
+        if (frameOptional.isEmpty()) {
+            System.out.printf("[PAGE FAULT] %s\n", page);
+            if (MemoryMonitor.physicalMemKbInUse + Page.SIZE_KB > MemoryMonitor.MAX_PHYSICAL_MEM_KB) {
+                swapIn(page);
+            } else {
+                MMU.allocateFrame(page);
+                MemoryMonitor.physicalMemKbInUse += Page.SIZE_KB;
+            }
+        }
+    }
 
+    private static void swapIn(Page toBeSwappedIn) {
+        swapOut();
+        MMU.allocateFrame(toBeSwappedIn);
+        System.out.printf("[SWAP-IN] %s", toBeSwappedIn);
+        MemoryMonitor.swapIns++;
+    }
+
+    private static void swapOut() {
+        Page toBeSwappedOut = MMU.getLeastRecentlyUsed();
+        MMU.freeFrame(toBeSwappedOut);
+        System.out.printf("[SWAP-OUT] %s\n", toBeSwappedOut);
+        MemoryMonitor.swapOuts++;
+    }
 }
