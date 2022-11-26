@@ -25,9 +25,10 @@ public class OS {
         return (sizeInKb + MemoryMonitor.virtualMemKbInUse < MemoryMonitor.MAX_VIRTUAL_MEM_KB);
     }
 
-    public static void runProcesses() {
+    public static void runProcesses() throws InterruptedException {
         for (Process p : processes) {
             p.run();
+            Thread.sleep(100);
         }
     }
 
@@ -43,23 +44,24 @@ public class OS {
             if (MemoryMonitor.physicalMemKbInUse + Page.SIZE_KB > MemoryMonitor.MAX_PHYSICAL_MEM_KB) {
                 swapIn(page);
             } else {
-                MMU.allocateFrame(page);
+                MMU.allocateFrame(page, null);
                 MemoryMonitor.physicalMemKbInUse += Page.SIZE_KB;
             }
         }
     }
 
     private static void swapIn(Page toBeSwappedIn) {
-        swapOut();
-        MMU.allocateFrame(toBeSwappedIn);
-        System.out.printf("[SWAP-IN] %s", toBeSwappedIn);
+        Frame freeFrameAddr = swapOut();
+        MMU.allocateFrame(toBeSwappedIn, freeFrameAddr);
+        System.out.printf("[SWAP-IN] %s\n", toBeSwappedIn);
         MemoryMonitor.swapIns++;
     }
 
-    private static void swapOut() {
+    private static Frame swapOut() {
         Page toBeSwappedOut = MMU.getLeastRecentlyUsed();
-        MMU.freeFrame(toBeSwappedOut);
+        Frame freedFrame = MMU.freeFrame(toBeSwappedOut);
         System.out.printf("[SWAP-OUT] %s\n", toBeSwappedOut);
         MemoryMonitor.swapOuts++;
+        return freedFrame;
     }
 }

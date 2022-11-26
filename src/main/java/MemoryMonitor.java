@@ -27,12 +27,19 @@ class MemoryMonitor {
     }
 
     public static void printPageTable() {
-        String header = String.format("%n%30s%40s%n", "Page", "Validity");
         StringBuilder sb = new StringBuilder();
+
+        String header = "========================= PAGE TABLE =========================\n";
         sb.append(header);
+
+        String tableHeader = String.format("%30s%40s%n", "Page", "Validity");
+        sb.append(tableHeader);
+
         for (Map.Entry<Page, Boolean> pageEntry: MMU.getPageTable().entrySet()) {
             sb.append(String.format("%s%15s%n", pageEntry.getKey(), pageEntry.getValue()));
         }
+        String footer = "==============================================================\n";
+        sb.append(footer);
         System.out.println(sb);
     }
 }

@@ -1,3 +1,15 @@
 public class Frame {
-    static final long SIZE_IN_BYTES = 8000;
+    private static int ID_COUNTER = 0;
+    private int id;
+
+    public Frame() {
+        this.id = ID_COUNTER;
+        ID_COUNTER++;
+    }
+
+    @Override
+    public String toString() {
+        return String.format("Frame %d", id);
+    }
+
 }

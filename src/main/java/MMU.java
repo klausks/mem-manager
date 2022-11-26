@@ -20,16 +20,20 @@ class MMU {
         return pages;
     }
 
-    public static void allocateFrame(Page page) {
-        pageFrameMap.put(page, new Frame());
+    public static void allocateFrame(Page page, Frame frame) {
+        if (frame == null) {
+            frame = new Frame();
+        }
+        pageFrameMap.put(page, frame);
         pageTable.put(page, true);
+        System.out.printf("[ALLOCATE] %s to %s\n", frame, page);
     }
 
     public static Optional<Frame> getFrame(Page page) {
         boolean isPageInPhysicalMemory = pageTable.get(page);
         if (isPageInPhysicalMemory) {
             Frame frame = pageFrameMap.get(page);
-            System.out.printf("Retrieved %s linked to page %s\n", frame, page);
+            System.out.printf("[RETRIEVE] %s -> %s\n", frame, page);
             return Optional.of(pageFrameMap.get(page));
         } else {
             return Optional.empty();
@@ -48,8 +52,10 @@ class MMU {
         return leastRecentlyUsed;
     }
 
-    public static void freeFrame(Page page) {
+    public static Frame freeFrame(Page page) {
+        Frame freed = pageFrameMap.get(page);
         pageFrameMap.remove(page);
         pageTable.put(page, false);
+        return freed;
     }
 }
